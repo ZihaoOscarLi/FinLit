@@ -41,42 +41,96 @@ def check_tickers():
 
 # print(check_tickers())
 
-def fetch_financial_data(tickers):
-    financial_data = {}
-    
-    for ticker in tickers:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        
-        # Fetch the most recent closing price
-        todays_data = stock.history(period='1d')
-        current_price = todays_data['Close'].iloc[-1] if not todays_data.empty else "No data available"
-        
-        # Attempt to fetch the earnings calendar and process it
-        earnings_calendar = stock.calendar
-        next_earnings_date = "N/A"
-        if isinstance(earnings_calendar, dict) and 'Earnings Date' in earnings_calendar:
-            earnings_dates = earnings_calendar.get('Earnings Date', [])
-            if isinstance(earnings_dates, list):
-                future_dates = [date for date in earnings_dates if date > datetime.now().date()]
-                next_earnings_date = str(future_dates[0]) if future_dates else "N/A"
-        
-        financial_data[ticker] = {
-            'Price': current_price,
-            'Volume': info.get('volume', "N/A"),
-            'Market Cap': info.get('marketCap', "N/A"),
-            'Beta (5Y Monthly)': info.get('beta', "N/A"),
-            'PE Ratio (TTM)': info.get('trailingPE', "N/A"),
-            'EPS (TTM)': info.get('trailingEps', "N/A"),
-            'Next Earning Call Date': next_earnings_date
-        }
+class FinancialDataFetcher:
+    def __init__(self, tickers):
+        self.tickers = tickers
 
-    return financial_data
+    def get_current_price(self, ticker):
+        stock = yf.Ticker(ticker)
+        todays_data = stock.history(period='1d')
+        return todays_data['Close'].iloc[-1] if not todays_data.empty else "No data available"
+
+    def get_next_earnings_date(self, ticker):
+        stock = yf.Ticker(ticker)
+        earnings_calendar = stock.calendar
+
+        # Handle the earnings calendar when it's a dictionary
+        if isinstance(earnings_calendar, dict):
+            earnings_dates = earnings_calendar.get('Earnings Date')
+            if earnings_dates:
+                # Assuming 'Earnings Date' provides a list of dates or a single date
+                if isinstance(earnings_dates, list):
+                    # Convert dates to datetime.date objects if they're not already
+                    earnings_dates = [datetime.strptime(str(date), '%Y-%m-%d').date() for date in earnings_dates]
+                    future_dates = [date for date in earnings_dates if date > datetime.now().date()]
+                    if future_dates:
+                        # Return the nearest future date formatted as a string
+                        return str(min(future_dates))
+                else:
+                    # Handle a single date (assuming it's already a datetime.date object or similar)
+                    return str(earnings_dates)
+        return "N/A"
+
+    def calculate_pb_ratio(self, ticker):
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            # Fetch the last available close price and book value per share
+            current_price = self.get_current_price(ticker)
+            book_value_per_share = info.get('bookValue')
+            
+            # Calculate the P/B ratio if both values are available and book value is not zero
+            if current_price and book_value_per_share and book_value_per_share != 0:
+                pb_ratio = current_price / book_value_per_share
+                return pb_ratio
+            return "N/A"
+
+    def fetch_financial_data(self):
+        financial_data = {}
+        for ticker in self.tickers:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            current_price = self.get_current_price(ticker)
+            next_earnings_date = self.get_next_earnings_date(ticker)
+            pb_ratio = self.calculate_pb_ratio(ticker)
+
+            financial_data[ticker] = {
+                'Current Price': current_price,
+                'Volume': info.get('volume', "N/A"),
+                'Market Cap': info.get('marketCap', "N/A"),
+                'Beta (5Y Monthly)': info.get('beta', "N/A"),
+                'PE Ratio (TTM)': info.get('trailingPE', "N/A"),
+                'EPS (TTM)': info.get('trailingEps', "N/A"),
+                'Next Earning Call Date': next_earnings_date,
+                'P/B Ratio': pb_ratio
+            }
+        return financial_data
 
 # Example usage
-valid_tickers = ['GTLB', 'MSFT']  # Use the output from your ticker validation function
-financial_info = fetch_financial_data(valid_tickers)
-print(financial_info)
+# tickers = ['AAPL', 'MSFT', 'GOOGL']
+# data_fetcher = FinancialDataFetcher(tickers)
+# financial_info = data_fetcher.fetch_financial_data()
+# print(financial_info)
+
+import unittest
+from FinLit1 import FinancialDataFetcher  # Adjust 'your_module' to the name of your Python file containing the class
+
+class TestFinancialDataFetcher(unittest.TestCase):
+    def test_calculate_pb_ratio(self):
+        fetcher = FinancialDataFetcher(tickers=['AAPL'])
+        pb_ratio = fetcher.calculate_pb_ratio('AAPL')  # Use a well-known ticker to ensure data availability
+
+        # Check if pb_ratio is a number and not "N/A"
+        self.assertNotEqual(pb_ratio, "N/A", "P/B Ratio should not be 'N/A'")
+        self.assertIsInstance(pb_ratio, (float, int), "P/B Ratio should be a number")
+
+if __name__ == '__main__':
+    # unittest.main()
+    tickers = ["SMCI"]
+    data_fetcher = FinancialDataFetcher(tickers)
+    financial_info = data_fetcher.fetch_financial_data()
+    print(financial_info)
+
 
 
 # def export_earnings_calendar_to_csv(ticker_symbol):
