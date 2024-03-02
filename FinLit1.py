@@ -47,37 +47,36 @@ def fetch_financial_data(tickers):
     for ticker in tickers:
         stock = yf.Ticker(ticker)
         info = stock.info
-
-        # Attempt to fetch the earnings calendar
+        
+        # Fetch the most recent closing price
+        todays_data = stock.history(period='1d')
+        current_price = todays_data['Close'].iloc[-1] if not todays_data.empty else "No data available"
+        
+        # Attempt to fetch the earnings calendar and process it
         earnings_calendar = stock.calendar
-
-        # Handle the earnings date based on its format
+        next_earnings_date = "N/A"
         if isinstance(earnings_calendar, dict) and 'Earnings Date' in earnings_calendar:
-            earnings_dates = earnings_calendar['Earnings Date']
-            # Check if earnings_dates is a list and find the next earnings date
+            earnings_dates = earnings_calendar.get('Earnings Date', [])
             if isinstance(earnings_dates, list):
-                next_earnings_date = next((date for date in earnings_dates if date > datetime.now().date()), "N/A")
-            else:
-                next_earnings_date = "N/A"
-        else:
-            next_earnings_date = "N/A"
+                future_dates = [date for date in earnings_dates if date > datetime.now().date()]
+                next_earnings_date = str(future_dates[0]) if future_dates else "N/A"
         
         financial_data[ticker] = {
-            'Current Price': info.get('regularMarketPrice'),
-            'Volume': info.get('volume'),
-            'Market Cap': info.get('marketCap'),
-            'Beta (5Y Monthly)': info.get('beta'),
-            'PE Ratio (TTM)': info.get('trailingPE'),
-            'EPS (TTM)': info.get('trailingEps'),
-            'Next Earning Call Date': str(next_earnings_date)  # Convert to string for consistency
+            'Price': current_price,
+            'Volume': info.get('volume', "N/A"),
+            'Market Cap': info.get('marketCap', "N/A"),
+            'Beta (5Y Monthly)': info.get('beta', "N/A"),
+            'PE Ratio (TTM)': info.get('trailingPE', "N/A"),
+            'EPS (TTM)': info.get('trailingEps', "N/A"),
+            'Next Earning Call Date': next_earnings_date
         }
 
     return financial_data
 
 # Example usage
-# valid_tickers = ['GTLB', 'MSFT']  # Use the output from your ticker validation function
-# financial_info = fetch_financial_data(valid_tickers)
-# print(financial_info)
+valid_tickers = ['GTLB', 'MSFT']  # Use the output from your ticker validation function
+financial_info = fetch_financial_data(valid_tickers)
+print(financial_info)
 
 
 # def export_earnings_calendar_to_csv(ticker_symbol):
