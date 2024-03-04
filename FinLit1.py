@@ -106,12 +106,6 @@ class FinancialDataFetcher:
             }
         return financial_data
 
-# Example usage
-# tickers = ['AAPL', 'MSFT', 'GOOGL']
-# data_fetcher = FinancialDataFetcher(tickers)
-# financial_info = data_fetcher.fetch_financial_data()
-# print(financial_info)
-
 import unittest
 from FinLit1 import FinancialDataFetcher  # Adjust 'your_module' to the name of your Python file containing the class
 
@@ -126,7 +120,7 @@ class TestFinancialDataFetcher(unittest.TestCase):
 
 if __name__ == '__main__':
     # unittest.main()
-    tickers = ["SMCI"]
+    tickers = ["SMCI","AAPL","GOOGL"]
     data_fetcher = FinancialDataFetcher(tickers)
     financial_info = data_fetcher.fetch_financial_data()
     print(financial_info)
