@@ -1,5 +1,8 @@
 import yfinance as yf
 import pandas as pd
+from pypfopt.expected_returns import mean_historical_return
+from pypfopt import risk_models
+from pypfopt import expected_returns
 from datetime import datetime
 
 def check_tickers():
